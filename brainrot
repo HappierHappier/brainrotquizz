@@ -1,0 +1,166 @@
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+local mainFrame = Instance.new("Frame", screenGui)
+local freeWeaponsButton = Instance.new("TextButton", mainFrame)
+local autoFarmButton = Instance.new("TextButton", mainFrame)
+
+-- GUI properties
+screenGui.Name = "SleekGui"
+mainFrame.Name = "MainFrame"
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BorderSizePixel = 0
+
+freeWeaponsButton.Name = "FreeWeaponsButton"
+freeWeaponsButton.Size = UDim2.new(0, 280, 0, 50)
+freeWeaponsButton.Position = UDim2.new(0.5, 0, 0.1, 0)
+freeWeaponsButton.AnchorPoint = Vector2.new(0.5, 0)
+freeWeaponsButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+freeWeaponsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+freeWeaponsButton.Text = "Free Weapons"
+freeWeaponsButton.Font = Enum.Font.SourceSans
+freeWeaponsButton.TextSize = 24
+freeWeaponsButton.BorderSizePixel = 0
+
+autoFarmButton.Name = "AutoFarmButton"
+autoFarmButton.Size = UDim2.new(0, 280, 0, 50)
+autoFarmButton.Position = UDim2.new(0.5, 0, 0.3, 0)
+autoFarmButton.AnchorPoint = Vector2.new(0.5, 0)
+autoFarmButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+autoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoFarmButton.Text = "Auto Farm"
+autoFarmButton.Font = Enum.Font.SourceSans
+autoFarmButton.TextSize = 24
+autoFarmButton.BorderSizePixel = 0
+
+-- Dragging functionality
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Sliding functionality
+local guiVisible = true
+
+local function toggleGui()
+    guiVisible = not guiVisible
+    local newPos = guiVisible and UDim2.new(0.5, -150, 0.5, -200) or UDim2.new(1, 0, 0.5, -200)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = newPos}):Play()
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Z then
+        toggleGui()
+    end
+end)
+
+-- Free weapons button functionality
+local function giveFreeWeapons()
+    local weapons = {
+        "Cape", "GreyPotion", "Speed", "RedPotion", "Shoes", "Banana",
+        "Bigfoot", "DeathShoes", "Hover", "RocketBoots", "Bike", "Turkey"
+    }
+    
+    for _, weapon in ipairs(weapons) do
+        ReplicatedStorage.Weapon[weapon]:FireServer()
+    end
+end
+
+freeWeaponsButton.MouseButton1Click:Connect(giveFreeWeapons)
+
+-- Auto farm button functionality
+local autoFarmActive = false
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+local function teleportToCFrame(cframe)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = cframe
+    end
+end
+
+local function tweenToCFrame(cframe)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local tween = TweenService:Create(
+            character.HumanoidRootPart,
+            TweenInfo.new(2), -- Adjust tween duration as needed
+            {CFrame = cframe}
+        )
+        tween:Play()
+        tween.Completed:Wait()
+    end
+end
+
+local function autoFarm()
+    while autoFarmActive do
+        teleportToCFrame(CFrame.new(20.3986015, 3.99802518, -134.220322, -0.486991286, -4.11924077e-08, -0.873406827, 4.32129674e-08, 1, -7.12574533e-08, 0.873406827, -7.24442586e-08, -0.486991286))
+        tweenToCFrame(CFrame.new(283.895386, 7.26828194, -130.346222, 0.122597918, 7.22456477e-08, -0.992456436, 2.24803873e-08, 1, 7.55717835e-08, 0.992456436, -3.15757482e-08, 0.122597918))
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        wait(2)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end
+end
+
+autoFarmButton.MouseButton1Click:Connect(function()
+    autoFarmActive = not autoFarmActive
+    if autoFarmActive then
+        autoFarmButton.Text = "Auto Farm (ON)"
+        coroutine.wrap(autoFarm)()
+    else
+        autoFarmButton.Text = "Auto Farm (OFF)"
+    end
+end)
+
+-- Optional: Adding a blur effect in the background when the GUI is open
+local blurEffect = Instance.new("BlurEffect", game.Lighting)
+blurEffect.Size = 0
+
+local function updateBlur()
+    TweenService:Create(blurEffect, TweenInfo.new(0.5), {Size = guiVisible and 0 or 15}):Play()
+end
+
+toggleGui = function()
+    guiVisible = not guiVisible
+    local newPos = guiVisible and UDim2.new(0.5, -150, 0.5, -200) or UDim2.new(1, 0, 0.5, -200)
+    
+    TweenService:Create(mainFrame, TweenInfo.new(0.5), {Position = newPos}):Play()
+    updateBlur()
+end
